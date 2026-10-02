@@ -4,107 +4,290 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f5f5f0">
-<title>BLACKBOX AI</title>
+<title>Mus ai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f5f0;--white:#fff;--ink:#111;--line:2px solid #111;--green:#b7ff75}
+:root{
+  --bg:#f5f5f0;
+  --surface:#ffffff;
+  --ink:#111111;
+  --red:#e11d2e;
+  --green:#b7ff75;
+  --yellow:#ffe066;
+  --gray:#888;
+  --radius:10px;
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Space Grotesk",sans-serif;min-height:100dvh;overflow:hidden}
-button,textarea{font:inherit}button{cursor:pointer;color:inherit}
-.app{height:100dvh;max-width:1000px;margin:auto;padding:0 15px;display:flex;flex-direction:column}
-header{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:var(--line);flex-shrink:0}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.7px}
-.brand-icon{width:34px;height:34px;display:grid;place-items:center;background:#111;color:white;border-radius:8px}
-.brand-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.actions{display:flex;gap:8px}
-.icon{height:38px;min-width:40px;border:var(--line);border-radius:8px;background:white;box-shadow:3px 3px #111;font-weight:700;display:grid;place-items:center}
-.icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.icon:active,.suggestion:active,.send:active{transform:translate(3px,3px);box-shadow:none}
-main{flex:1;min-height:0;display:flex;flex-direction:column}
-.chat{flex:1;overflow-y:auto;padding:20px 0 24px;overscroll-behavior:contain;scroll-behavior:smooth}
-.welcome{max-width:560px;text-align:center;margin:8vh auto 30px}
-.hero{height:68px;width:68px;margin:0 auto 20px;background:var(--green);border:var(--line);border-radius:15px;box-shadow:4px 4px #111;display:grid;place-items:center;transform:rotate(-4deg)}
-.hero svg{width:34px;height:34px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-h1{font-size:clamp(34px,8vw,54px);letter-spacing:-3px;line-height:1;margin:0 0 14px}
-.welcome p{font-size:14px;line-height:1.7;color:#555;max-width:390px;margin:auto}
-.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:26px auto 0;max-width:520px}
-.suggestion{background:white;border:var(--line);border-radius:10px;box-shadow:3px 3px #111;text-align:left;padding:12px;min-height:76px;font-size:13px;font-weight:600;display:flex;flex-direction:column;justify-content:center}
-.suggestion .svg-icon{display:block;width:22px;height:22px;margin-bottom:8px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.messages{max-width:740px;width:100%;margin:auto;display:flex;flex-direction:column;gap:22px}
-.message{display:flex;gap:10px;align-items:flex-start}.message.user{flex-direction:row-reverse}
-.avatar{width:32px;height:32px;flex-shrink:0;display:grid;place-items:center;border:var(--line);border-radius:9px;background:var(--green);font-weight:700}
-.avatar svg{width:16px;height:16px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.user .avatar{background:#111;color:white}
-.user .avatar svg{stroke:white}
-.message-content{max-width:min(88%,620px);min-width:0}.label{font:10px "DM Mono",monospace;letter-spacing:1px;color:#777;margin:0 0 7px}.user .label{text-align:right}
-.bubble{border:var(--line);border-radius:4px 13px 13px 13px;padding:12px 14px;background:white;box-shadow:3px 3px #111;font-size:14px;line-height:1.7;overflow-wrap:anywhere}
-.user .bubble{background:var(--green);border-radius:13px 4px 13px 13px}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Space Grotesk",sans-serif;overflow:hidden}
+button,textarea{font:inherit}button{cursor:pointer;color:inherit;border:0;background:none}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+
+.app{height:100dvh;max-width:1000px;margin:auto;padding:0 15px;display:flex;flex-direction:column;position:relative}
+
+/* ===== HEADER ===== */
+header{
+  height:72px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--ink);flex-shrink:0;position:relative;z-index:30;
+}
+.brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:-.7px;font-size:17px}
+.brand-logo{
+  width:40px;height:40px;border-radius:8px;object-fit:cover;
+  border:3px solid var(--ink);background:var(--surface);display:block;
+  box-shadow:3px 3px 0 var(--red);
+}
+
+/* ===== MENU ===== */
+.menu-wrap{position:relative}
+.menu-btn{
+  height:42px;min-width:44px;border:3px solid var(--ink);
+  border-radius:8px;background:var(--surface);
+  display:grid;place-items:center;box-shadow:3px 3px 0 var(--ink);
+  transition:transform .08s ease,box-shadow .08s ease,background .15s ease;
+}
+.menu-btn:hover{background:var(--yellow)}
+.menu-btn:active{transform:translate(3px,3px);box-shadow:none}
+.menu-btn[aria-expanded="true"]{background:var(--yellow);transform:translate(3px,3px);box-shadow:none}
+.menu-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+.menu-dropdown{
+  position:absolute;top:calc(100% + 10px);right:0;
+  min-width:210px;background:var(--surface);
+  border:3px solid var(--ink);border-radius:var(--radius);
+  box-shadow:5px 5px 0 var(--ink);
+  padding:6px;display:flex;flex-direction:column;gap:4px;
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity .15s ease,transform .15s ease,visibility .15s;
+  z-index:50;
+}
+.menu-dropdown.open{opacity:1;visibility:visible;transform:translateY(0)}
+.menu-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 12px;border-radius:7px;
+  font-size:13px;font-weight:700;text-align:left;
+  transition:background .12s ease,color .12s ease;
+}
+.menu-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.menu-item:hover{background:var(--green)}
+.menu-item.danger:hover{background:var(--red);color:#fff}
+.menu-item.danger svg{stroke:var(--red)}
+.menu-item.danger:hover svg{stroke:#fff}
+
+/* ===== MAIN ===== */
+main{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1}
+.chat{flex:1;overflow-y:auto;padding:24px 0 24px;overscroll-behavior:contain;scroll-behavior:smooth}
+.chat::-webkit-scrollbar{width:12px}
+.chat::-webkit-scrollbar-track{background:var(--bg);border-left:3px solid var(--ink)}
+.chat::-webkit-scrollbar-thumb{background:var(--red);border:3px solid var(--ink)}
+
+/* ===== WELCOME ===== */
+.welcome{
+  max-width:600px;margin:0 auto;padding:8px;
+  display:flex;flex-direction:column;justify-content:center;
+  min-height:100%;
+}
+.welcome-title{
+  font-size:clamp(24px,5vw,32px);font-weight:700;letter-spacing:-1px;
+  text-align:center;margin:0 0 8px;
+}
+.welcome-sub{
+  text-align:center;color:var(--gray);font-size:13px;font-weight:500;
+  margin:0 0 32px;
+}
+.suggestions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+}
+.suggestion{
+  background:var(--surface);border:3px solid var(--ink);
+  color:var(--ink);border-radius:var(--radius);text-align:left;padding:16px;
+  min-height:92px;font-size:13px;font-weight:700;
+  display:flex;flex-direction:column;justify-content:space-between;gap:10px;
+  box-shadow:4px 4px 0 var(--ink);
+  transition:transform .08s ease,box-shadow .08s ease,background .15s ease,color .15s ease;
+}
+.suggestion:hover{background:var(--red);color:#fff;transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.suggestion:hover .svg-icon{stroke:#fff}
+.suggestion:active{transform:translate(4px,4px);box-shadow:none}
+.suggestion .svg-icon{
+  width:22px;height:22px;
+  stroke:var(--ink);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke .15s ease;
+}
+.suggestion .label{font-size:13px;line-height:1.3}
+
+/* ===== MESSAGES ===== */
+.messages{max-width:740px;width:100%;margin:auto;display:flex;flex-direction:column;gap:24px}
+.message{display:flex;gap:11px;align-items:flex-start;animation:msgIn .25s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.message.user{flex-direction:row-reverse}
+.avatar{
+  width:36px;height:36px;flex-shrink:0;display:grid;place-items:center;
+  border-radius:8px;background:var(--surface);overflow:hidden;
+  border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar svg{width:17px;height:17px;stroke:var(--ink);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.user .avatar{background:var(--red)}
+.user .avatar svg{stroke:#fff}
+.message-content{max-width:min(88%,620px);min-width:0}
+.label{font:10px "DM Mono",monospace;letter-spacing:1.5px;color:var(--ink);margin:0 0 8px;text-transform:uppercase;font-weight:700}
+.user .label{text-align:right}
+.bubble{
+  border:3px solid var(--ink);border-radius:10px 10px 10px 3px;
+  padding:13px 15px;background:var(--surface);
+  box-shadow:4px 4px 0 var(--ink);
+  font-size:14px;line-height:1.7;overflow-wrap:anywhere;
+}
+.user .bubble{background:var(--green);border-radius:10px 10px 3px 10px}
 .bubble p{margin:0 0 10px}.bubble p:last-child{margin-bottom:0}
-.bubble pre{background:#171717;color:#f5f5f5;border-radius:8px;padding:12px;overflow-x:auto;font:12px/1.7 "DM Mono",monospace}
-.bubble code{font-family:"DM Mono",monospace}.bubble :not(pre)>code{background:#eee;padding:2px 4px;border-radius:4px}
-.tools{margin-top:7px}
-.tool{background:transparent;border:1px solid #aaa;border-radius:6px;padding:5px 9px;font-size:11px;display:inline-flex;align-items:center;gap:5px}
-.tool svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bubble h2,.bubble h3{margin:14px 0 8px;font-size:15px;font-weight:700}
+.bubble h2:first-child,.bubble h3:first-child{margin-top:0}
+.bubble pre{
+  background:#111;color:#f5f5f5;border:3px solid var(--ink);
+  border-radius:8px;padding:13px;overflow-x:auto;
+  font:12px/1.7 "DM Mono",monospace;margin:10px 0;
+}
+.bubble code{font-family:"DM Mono",monospace}
+.bubble :not(pre)>code{background:#111;color:var(--green);padding:2px 5px;border-radius:4px;font-weight:500}
+.bubble strong{font-weight:700}
+
+.tools{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
+.tool{
+  background:var(--surface);border:2px solid var(--ink);color:var(--ink);
+  border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;
+  display:inline-flex;align-items:center;gap:5px;
+  box-shadow:2px 2px 0 var(--ink);
+  transition:transform .08s ease,box-shadow .08s ease,background .15s ease;
+}
+.tool:hover{background:var(--yellow)}
+.tool:active{transform:translate(2px,2px);box-shadow:none}
+.tool svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
 .typing{display:flex;gap:5px;padding:5px}
-.typing i{width:7px;height:7px;background:#111;border-radius:50%;animation:b .7s infinite alternate}
-.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
-@keyframes b{to{opacity:.3;transform:translateY(-5px)}}
-.composer-wrap{position:sticky;bottom:0;background:var(--bg);padding:10px 0 max(13px,env(safe-area-inset-bottom));flex-shrink:0}
-.composer{max-width:740px;margin:auto;display:flex;align-items:flex-end;gap:8px;padding:8px;border:var(--line);background:white;border-radius:13px;box-shadow:4px 4px #111}
-textarea{flex:1;min-width:0;resize:none;border:0;outline:0;background:transparent;padding:10px 5px;min-height:42px;max-height:150px;font-size:16px;line-height:1.5}
-textarea::placeholder{color:#999}
-.send{width:43px;height:43px;flex-shrink:0;border:var(--line);border-radius:9px;background:#111;color:white;display:grid;place-items:center}
-.send svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.send:disabled{opacity:.45}
-.meta{max-width:740px;margin:9px auto 0;display:flex;justify-content:space-between;gap:8px;color:#777;font:10px "DM Mono",monospace}
-.status:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#62b832;margin-right:6px}
-@media(max-width:600px){.app{padding:0 12px}header{height:59px}.chat{padding-top:12px}.welcome{margin:9vh auto 24px}.welcome p{font-size:13px;padding:0 8px}.suggestions{gap:9px;margin-top:23px}.suggestion{min-height:80px;padding:10px;font-size:12px}.suggestion .svg-icon{width:20px;height:20px;margin-bottom:6px}.message{gap:8px}.avatar{width:29px;height:29px}.message-content{max-width:89%}.bubble{font-size:13.5px;padding:11px 12px}.composer{padding:7px;gap:5px;box-shadow:3px 3px #111}.meta{font-size:9px}}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+.typing i{width:9px;height:9px;background:var(--ink);border:2px solid var(--ink);border-radius:50%;animation:b .6s infinite alternate}
+.typing i:nth-child(2){animation-delay:.15s;background:var(--red)}
+.typing i:nth-child(3){animation-delay:.3s}
+@keyframes b{to{opacity:.3;transform:translateY(-6px)}}
+
+/* ===== COMPOSER ===== */
+.composer-wrap{
+  position:sticky;bottom:0;background:var(--bg);
+  padding:12px 0 max(15px,env(safe-area-inset-bottom));
+  flex-shrink:0;border-top:3px solid var(--ink);
+}
+.composer{
+  max-width:740px;margin:auto;display:flex;align-items:flex-end;gap:9px;
+  padding:9px;border:3px solid var(--ink);background:var(--surface);
+  border-radius:12px;box-shadow:5px 5px 0 var(--red);
+  transition:box-shadow .15s ease;
+}
+.composer:focus-within{box-shadow:5px 5px 0 var(--ink)}
+textarea{
+  flex:1;min-width:0;resize:none;border:0;outline:0;background:transparent;
+  padding:10px 6px;min-height:44px;max-height:150px;
+  font-size:16px;line-height:1.5;font-weight:500;
+}
+textarea::placeholder{color:var(--gray);font-weight:500}
+.send{
+  width:46px;height:46px;flex-shrink:0;border:3px solid var(--ink);border-radius:9px;
+  background:var(--red);color:#fff;display:grid;place-items:center;
+  box-shadow:3px 3px 0 var(--ink);
+  transition:transform .08s ease,box-shadow .08s ease,background .15s ease;
+}
+.send:hover{background:var(--ink)}
+.send:active{transform:translate(3px,3px);box-shadow:none}
+.send:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.send svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.meta{
+  max-width:740px;margin:10px auto 0;display:flex;justify-content:space-between;
+  gap:8px;color:var(--ink);font:10px "DM Mono",monospace;
+  letter-spacing:.5px;font-weight:700;
+}
+.status{display:inline-flex;align-items:center}
+.status:before{
+  content:"";display:inline-block;width:8px;height:8px;
+  border:2px solid var(--ink);border-radius:50%;background:var(--green);
+  margin-right:6px;
+}
+
+/* overlay untuk menutup dropdown */
+.overlay{
+  position:fixed;inset:0;z-index:20;
+  background:transparent;display:none;
+}
+.overlay.open{display:block}
+
+@media(max-width:600px){
+  .app{padding:0 12px}
+  header{height:64px}
+  .brand-logo{width:36px;height:36px}
+  .brand{font-size:15px}
+  .menu-btn{height:38px;min-width:40px}
+  .chat{padding-top:14px}
+  .welcome-title{font-size:22px}
+  .welcome-sub{font-size:12px;margin-bottom:24px}
+  .suggestions{gap:10px}
+  .suggestion{min-height:86px;padding:12px;font-size:12px}
+  .suggestion .svg-icon{width:20px;height:20px}
+  .suggestion .label{font-size:12px}
+  .message{gap:9px}
+  .avatar{width:32px;height:32px}
+  .message-content{max-width:89%}
+  .bubble{font-size:13.5px;padding:11px 12px;box-shadow:3px 3px 0 var(--ink)}
+  .composer{padding:8px;gap:6px;box-shadow:4px 4px 0 var(--red)}
+  .meta{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
   <div class="brand">
-    <div class="brand-icon">
-      <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-    </div>
-    BLACKBOX AI
+    <img class="brand-logo" src="https://cdn.zass.in/LaI6LUpWpm.png" alt="Mus ai">
+    Mus ai
   </div>
-  <div class="actions">
-    <button class="icon" id="newChat" aria-label="Chat baru">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <div class="menu-wrap">
+    <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <button class="icon" id="clearChat" aria-label="Hapus chat">
-      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-    </button>
+    <div class="menu-dropdown" id="menuDropdown" role="menu">
+      <button class="menu-item" id="newChat" role="menuitem" type="button">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Chat Baru
+      </button>
+      <button class="menu-item danger" id="clearChat" role="menuitem" type="button">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        Hapus Chat
+      </button>
+    </div>
   </div>
 </header>
+<div class="overlay" id="overlay"></div>
 <main>
   <section class="chat" id="chatArea">
     <div class="welcome" id="welcome">
-      <div class="hero">
-        <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-      </div>
-      <h1>Think less.<br>Build more.</h1>
-      <p>Asisten AI untuk ide, coding, produktivitas, dan semua hal yang ingin kamu eksplorasi.</p>
+      <h2 class="welcome-title">Mulai percakapan</h2>
+      <p class="welcome-sub">Pilih salah satu atau tulis pesanmu sendiri</p>
       <div class="suggestions">
         <button class="suggestion" data-prompt="Buatkan website portfolio modern menggunakan HTML CSS dan JavaScript">
           <svg class="svg-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-          Buat website
+          <span class="label">Buat website</span>
         </button>
         <button class="suggestion" data-prompt="Jelaskan konsep API dengan contoh sederhana">
           <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          Jelaskan konsep
+          <span class="label">Jelaskan konsep</span>
         </button>
         <button class="suggestion" data-prompt="Bantu saya mencari ide project aplikasi yang menarik">
           <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          Cari ide project
+          <span class="label">Cari ide project</span>
         </button>
         <button class="suggestion" data-prompt="Buatkan script JavaScript yang berguna untuk automasi">
           <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-          Generate code
+          <span class="label">Generate code</span>
         </button>
       </div>
     </div>
@@ -113,7 +296,7 @@ textarea::placeholder{color:#999}
   <div class="composer-wrap">
     <form class="composer" id="chatForm">
       <textarea id="prompt" rows="1" placeholder="Tulis sesuatu untuk AI..." aria-label="Pesan untuk AI"></textarea>
-      <button class="send" id="sendBtn" type="submit" aria-label="Kirim">
+      <button class="send" id="sendBtn" type="submit" aria-label="Kirim" title="Kirim">
         <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
     </form>
@@ -124,34 +307,50 @@ textarea::placeholder{color:#999}
 <script>
 "use strict";
 const CONFIG={endpoint:"/api/chat"};
+const LOGO_URL="https://cdn.zass.in/LaI6LUpWpm.png";
 const $=s=>document.querySelector(s);
 const chatArea=$("#chatArea"),messagesEl=$("#messages"),welcomeEl=$("#welcome"),promptEl=$("#prompt"),sendBtn=$("#sendBtn"),chatForm=$("#chatForm");
+const menuBtn=$("#menuBtn"),menuDropdown=$("#menuDropdown"),overlay=$("#overlay");
 let conversation=[],isGenerating=false,abortController=null;
+
+/* ===== MENU HANDLERS ===== */
+function openMenu(){menuDropdown.classList.add("open");overlay.classList.add("open");menuBtn.setAttribute("aria-expanded","true");}
+function closeMenu(){menuDropdown.classList.remove("open");overlay.classList.remove("open");menuBtn.setAttribute("aria-expanded","false");}
+function toggleMenu(){menuDropdown.classList.contains("open")?closeMenu():openMenu();}
+menuBtn.addEventListener("click",e=>{e.stopPropagation();toggleMenu();});
+overlay.addEventListener("click",closeMenu);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMenu();});
+document.addEventListener("click",e=>{if(!e.target.closest(".menu-wrap"))closeMenu();});
 
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function renderMarkdown(text){
  let s=escapeHTML(text),blocks=[];
  s=s.replace(/```([\w-]*)\n?([\s\S]*?)```/g,(_,lang,code)=>{blocks.push(`<pre><code>${code.trim()}</code></pre>`);return `%%BLOCK${blocks.length-1}%%`;});
- s=s.replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\*(.*?)\*/g,"<em>$1</em>").replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/\n/g,"<br>");
+ s=s.replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g,"<em>$1</em>")
+    .replace(/^### (.*)$/gm,"<h3>$1</h3>")
+    .replace(/^## (.*)$/gm,"<h2>$1</h2>")
+    .replace(/\n/g,"<br>");
  return s.replace(/%%BLOCK(\d+)%%/g,(_,i)=>blocks[+i]);
 }
 function scrollBottom(){requestAnimationFrame(()=>{chatArea.scrollTop=chatArea.scrollHeight;});}
 
-const AI_AVATAR_SVG=`<svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
 const USER_AVATAR_SVG=`<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
 
 function createMessage(role,content=""){
  const user=role==="user",el=document.createElement("article");el.className=`message ${role}`;
  const avatar=document.createElement("div");avatar.className="avatar";
- avatar.innerHTML = user ? USER_AVATAR_SVG : AI_AVATAR_SVG;
+ if(user){avatar.innerHTML=USER_AVATAR_SVG;}
+ else{const img=document.createElement("img");img.src=LOGO_URL;img.alt="Mus ai";avatar.append(img);}
  const wrap=document.createElement("div");wrap.className="message-content";
- const label=document.createElement("div");label.className="label";label.textContent=user?"YOU":"BLACKBOX AI";
+ const label=document.createElement("div");label.className="label";label.textContent=user?"YOU":"MUS AI";
  const bubble=document.createElement("div");bubble.className="bubble";bubble.innerHTML=renderMarkdown(content);
  wrap.append(label,bubble);el.append(avatar,wrap);messagesEl.append(el);scrollBottom();return{el,bubble,wrap};
 }
 function addCopyButton(wrap,text){
  const tools=document.createElement("div");tools.className="tools";
- const b=document.createElement("button");b.className="tool";
+ const b=document.createElement("button");b.className="tool";b.type="button";
  b.innerHTML=`<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Salin</span>`;
  b.onclick=async()=>{try{await navigator.clipboard.writeText(text);b.querySelector("span").textContent="Tersalin";setTimeout(()=>b.querySelector("span").textContent="Salin",1400)}catch{b.querySelector("span").textContent="Gagal"}};
  tools.append(b);wrap.append(tools);
@@ -200,11 +399,11 @@ document.querySelectorAll(".suggestion").forEach(b=>b.addEventListener("click",(
 function resetChat(){
  if(abortController)abortController.abort();
  conversation=[];messagesEl.innerHTML="";
- welcomeEl.hidden=false;welcomeEl.style.display="block";
- promptEl.value="";resizeInput();
+ welcomeEl.hidden=false;welcomeEl.style.display="flex";
+ promptEl.value="";resizeInput();promptEl.focus();
 }
-$("#newChat").addEventListener("click",resetChat);
-$("#clearChat").addEventListener("click",()=>{if(conversation.length&&confirm("Hapus seluruh percakapan?"))resetChat();});
+$("#newChat").addEventListener("click",()=>{resetChat();closeMenu();});
+$("#clearChat").addEventListener("click",()=>{if(conversation.length&&confirm("Hapus seluruh percakapan?"))resetChat();closeMenu();});
 </script>
 </body>
 </html>
