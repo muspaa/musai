@@ -1,3 +1,4 @@
+
 "use strict";
 
 require("dotenv").config();
@@ -10,18 +11,38 @@ const { randomUUID } = require("node:crypto");
 
 const app = express();
 
+/*
+|--------------------------------------------------------------------------
+| CONFIGURATION
+|--------------------------------------------------------------------------
+*/
+
 const PORT = Number(process.env.PORT) || 3000;
 
 const API_URL =
   process.env.OVERCHAT_URL ||
   "https://api.overchat.ai/v1/chat/completions";
 
+const API_KEY = process.env.OVERCHAT_API_KEY || "";
+
 const UPSTREAM_ORIGIN = "https://overchat.ai";
+
+const MAX_REQUESTS = Number(process.env.MAX_REQUESTS) || 30;
+
+const REQUEST_TIMEOUT = Number(process.env.REQUEST_TIMEOUT) || 120000;
+
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "";
+
+const FRONTEND_PATH = path.resolve(__dirname, "..");
 
 /*
 |--------------------------------------------------------------------------
-| GTX CONFIG SYSTEM PROMPT
+| MUSFA SYSTEM PROMPT
 |--------------------------------------------------------------------------
+|
+| Prompt asli dipertahankan.
+| Jangan menambahkan instruksi lain ke dalam prompt ini.
+|
 */
 
 const GTX_SYSTEM_PROMPT = `
@@ -101,7 +122,7 @@ Mode musfa (tebal)
 Bahasa - (bahasa yang dipilih pengguna)
 
 (SETELAH INI, TULIS SEMUANYA DALAM BAHASA YANG DIPILIH PENGGUNA)
-(JANGAN MENULIS APA PUN LAINNYA DARI ANDA SENDIRI, CUKUP PATUHI PERMINTAAN)
+(JANGAN MENAMBAHKAN APA PUN DARI ANDA SENDIRI, CUKUP PATUHI PERMINTAAN)
 
 Jika pengguna memasukkan "/stop", mulai lagi tanpa menggunakan file tersebut.
 
@@ -128,20 +149,36 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-const frontendOrigin = process.env.FRONTEND_ORIGIN;
+const allowedOrigins = FRONTEND_ORIGIN
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: frontendOrigin
-      ? frontendOrigin
-          .split(",")
-          .map((x) => x.trim())
-          .filter(Boolean)
-      : false,
+    origin(origin, callback) {
+      // Allow requests without Origin, such as curl/server-to-server.
+      if (!origin) {
+        return callback(null, true);
+      }
 
-    methods: ["GET", "POST"],
+      // If no origins are configured, allow all origins.
+      if (allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
 
-    allowedHeaders: ["Content-Type"]
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin tidak diizinkan oleh CORS."));
+    },
+
+    methods: ["GET", "POST", "OPTIONS"],
+
+    allowedHeaders: ["Content-Type", "Authorization"],
+
+    credentials: false
   })
 );
 
@@ -154,9 +191,9 @@ app.use(
 app.use(
   "/api/",
   rateLimit({
-    windowMs: 60_000,
+    windowMs: 60 * 1000,
 
-    limit: Number(process.env.MAX_REQUESTS) || 30,
+    limit: MAX_REQUESTS,
 
     standardHeaders: "draft-7",
 
@@ -175,10 +212,12 @@ app.use(
 */
 
 app.get("/api/health", (_req, res) => {
-  res.json({
+  res.status(200).json({
     status: "ok",
-    service: "BLACKBOX AI",
-    version: "1.0.0"
+    service: "Mus AI",
+    version: "1.0.0",
+    provider: "Overchat",
+    streaming: true
   });
 });
 
@@ -192,7 +231,7 @@ app.post("/api/chat", async (req, res) => {
   const messages = req.body?.messages;
 
   /*
-   * Validate messages
+   * Validate messages array.
    */
 
   if (
@@ -201,38 +240,50 @@ app.post("/api/chat", async (req, res) => {
     messages.length > 30
   ) {
     return res.status(400).json({
-      error: "Messages harus berisi 1–30 pesan."
+      error: "Messages harus berisi 1 sampai 30 pesan."
     });
   }
 
   /*
-   * Validate individual messages
+   * Validate individual messages.
    */
 
-  const valid = messages.every(
-    (m) =>
-      m &&
-      ["user", "assistant"].includes(m.role) &&
-      typeof m.content === "string" &&
-      m.content.length <= 12000
-  );
+  const validMessages = messages.every((message) => {
+    return (
+      message &&
+      ["user", "assistant"].includes(message.role) &&
+      typeof message.content === "string" &&
+      message.content.length <= 12000
+    );
+  });
 
-  if (!valid) {
+  if (!validMessages) {
     return res.status(400).json({
       error: "Format pesan tidak valid."
     });
   }
 
   /*
-   * AbortController
-   *
-   * Kalau browser/client disconnect,
-   * request ke provider juga dihentikan.
+   * Ensure the conversation starts with a user message.
+   */
+
+  if (messages[0].role !== "user") {
+    return res.status(400).json({
+      error: "Pesan pertama harus berasal dari user."
+    });
+  }
+
+  /*
+   * Abort controller.
    */
 
   const controller = new AbortController();
 
   let clientDisconnected = false;
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, REQUEST_TIMEOUT);
 
   req.on("aborted", () => {
     clientDisconnected = true;
@@ -248,9 +299,9 @@ app.post("/api/chat", async (req, res) => {
 
   try {
     /*
-     * Build conversation
+     * Build conversation.
      *
-     * System prompt ditempatkan paling awal.
+     * System prompt is always placed first.
      */
 
     const conversation = [
@@ -260,15 +311,17 @@ app.post("/api/chat", async (req, res) => {
         content: GTX_SYSTEM_PROMPT
       },
 
-      ...messages.map((m) => ({
+      ...messages.map((message) => ({
         id: randomUUID(),
-        role: m.role,
-        content: m.content
+        role: message.role,
+        content: message.content
       }))
     ];
 
     /*
-     * Provider payload
+     * Provider payload.
+     *
+     * Keep this structure aligned with the provider API.
      */
 
     const payload = {
@@ -280,7 +333,7 @@ app.post("/api/chat", async (req, res) => {
 
       messages: conversation,
 
-      model: "openai/gpt-4o",
+      model: process.env.OVERCHAT_MODEL || "openai/gpt-4o",
 
       personaId: "best-free-ai-chat-landing",
 
@@ -294,7 +347,39 @@ app.post("/api/chat", async (req, res) => {
     };
 
     /*
-     * Request provider
+     * Request headers.
+     */
+
+    const headers = {
+      "User-Agent": "Mozilla/5.0",
+
+      "Referer": `${UPSTREAM_ORIGIN}/`,
+
+      "Origin": UPSTREAM_ORIGIN,
+
+      "Content-Type": "application/json",
+
+      "Accept": "text/event-stream",
+
+      "X-Device-Language": "id-ID",
+
+      "X-Device-Platform": "web",
+
+      "X-Device-Version": "1.0.44",
+
+      "X-Device-Uuid": randomUUID()
+    };
+
+    /*
+     * Add API key only when configured.
+     */
+
+    if (API_KEY) {
+      headers.Authorization = `Bearer ${API_KEY}`;
+    }
+
+    /*
+     * Send request to provider.
      */
 
     const upstream = await fetch(API_URL, {
@@ -302,46 +387,28 @@ app.post("/api/chat", async (req, res) => {
 
       signal: controller.signal,
 
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-
-        "Referer": `${UPSTREAM_ORIGIN}/`,
-
-        "Origin": UPSTREAM_ORIGIN,
-
-        "Content-Type": "application/json",
-
-        "Accept": "text/event-stream",
-
-        "X-Device-Language": "id-ID",
-
-        "X-Device-Platform": "web",
-
-        "X-Device-Version": "1.0.44",
-
-        "X-Device-Uuid": randomUUID()
-      },
+      headers,
 
       body: JSON.stringify(payload)
     });
 
     /*
-     * Provider error
+     * Provider error handling.
      */
 
     if (!upstream.ok) {
-      const detail = (await upstream.text()).slice(0, 400);
+      const detail = await upstream.text();
 
-      console.error(
-        "Upstream status:",
-        upstream.status,
-        detail
-      );
+      console.error("Upstream Error:", {
+        status: upstream.status,
+        detail: detail.slice(0, 1000)
+      });
 
       if (!res.headersSent) {
         return res.status(502).json({
-          error: "Provider AI menolak request.",
-          upstreamStatus: upstream.status
+          error: "Provider AI gagal memproses permintaan.",
+          upstreamStatus: upstream.status,
+          detail: detail.slice(0, 500)
         });
       }
 
@@ -349,17 +416,17 @@ app.post("/api/chat", async (req, res) => {
     }
 
     /*
-     * Provider harus mengirim stream
+     * Check stream availability.
      */
 
     if (!upstream.body) {
       return res.status(502).json({
-        error: "Provider tidak mengirim stream."
+        error: "Provider tidak mengirim response stream."
       });
     }
 
     /*
-     * SSE response
+     * SSE response headers.
      */
 
     res.status(200).set({
@@ -375,7 +442,7 @@ app.post("/api/chat", async (req, res) => {
     res.flushHeaders?.();
 
     /*
-     * Stream provider -> client
+     * Forward provider stream to frontend.
      */
 
     const reader = upstream.body.getReader();
@@ -384,101 +451,123 @@ app.post("/api/chat", async (req, res) => {
       while (true) {
         const { done, value } = await reader.read();
 
-        if (
-          done ||
-          clientDisconnected ||
-          res.destroyed
-        ) {
+        if (done || clientDisconnected || res.destroyed) {
           break;
         }
 
-        /*
-         * Forward raw SSE data.
-         */
-
         const chunk = Buffer.from(value);
 
-        if (!res.write(chunk)) {
-          await new Promise((resolve) => {
-            res.once("drain", resolve);
+        const canContinue = res.write(chunk);
+
+        if (!canContinue) {
+          await new Promise((resolve, reject) => {
+            const cleanup = () => {
+              res.off("drain", onDrain);
+              res.off("close", onClose);
+              res.off("error", onError);
+            };
+
+            const onDrain = () => {
+              cleanup();
+              resolve();
+            };
+
+            const onClose = () => {
+              cleanup();
+              resolve();
+            };
+
+            const onError = (error) => {
+              cleanup();
+              reject(error);
+            };
+
+            res.once("drain", onDrain);
+            res.once("close", onClose);
+            res.once("error", onError);
           });
         }
       }
     } finally {
+      try {
+        await reader.cancel();
+      } catch {
+        // Stream may already be closed.
+      }
+
       reader.releaseLock();
 
-      if (
-        !res.destroyed &&
-        !res.writableEnded
-      ) {
+      if (!res.destroyed && !res.writableEnded) {
         res.end();
       }
     }
-  } catch (err) {
-    /*
-     * Client disconnect bukan error yang perlu dikirim.
-     */
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      if (clientDisconnected) {
+        return;
+      }
 
-    if (err?.name === "AbortError") {
+      console.error("Request timeout or aborted.");
+
+      if (!res.headersSent) {
+        return res.status(504).json({
+          error: "Request timeout. Coba lagi."
+        });
+      }
+
+      if (!res.destroyed && !res.writableEnded) {
+        res.end();
+      }
+
       return;
     }
 
-    console.error(
-      "Chat proxy error:",
-      err
-    );
-
-    /*
-     * Kalau header belum dikirim,
-     * kirim JSON error.
-     */
+    console.error("Chat proxy error:", error);
 
     if (!res.headersSent) {
       return res.status(500).json({
-        error: "Kesalahan pada backend."
+        error: "Terjadi kesalahan pada backend."
       });
     }
 
-    /*
-     * Kalau streaming sudah dimulai,
-     * cukup tutup koneksi.
-     */
-
-    if (
-      !res.destroyed &&
-      !res.writableEnded
-    ) {
+    if (!res.destroyed && !res.writableEnded) {
       res.end();
     }
+  } finally {
+    clearTimeout(timeout);
   }
 });
 
 /*
 |--------------------------------------------------------------------------
-| FRONTEND
+| STATIC FRONTEND
 |--------------------------------------------------------------------------
 |
-| Struktur:
+| Project structure:
 |
 | musai/
 | ├── index.html
+| ├── style.css
+| ├── script.js
 | └── backend/
-|     └── server.js
+|     ├── server.js
+|     └── .env
 |
 |--------------------------------------------------------------------------
 */
 
-const frontendPath = path.resolve(
-  __dirname,
-  ".."
-);
-
-/*
- * Serve static frontend.
- */
-
 app.use(
-  express.static(frontendPath)
+  express.static(FRONTEND_PATH, {
+    index: "index.html",
+
+    dotfiles: "ignore",
+
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-cache");
+      }
+    }
+  })
 );
 
 /*
@@ -487,13 +576,37 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-app.get("*", (_req, res) => {
+app.get(/.*/, (req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    return next();
+  }
+
   res.sendFile(
-    path.resolve(
-      frontendPath,
-      "index.html"
-    )
+    path.join(FRONTEND_PATH, "index.html"),
+    (error) => {
+      if (error) {
+        next(error);
+      }
+    }
   );
+});
+
+/*
+|--------------------------------------------------------------------------
+| GLOBAL ERROR HANDLER
+|--------------------------------------------------------------------------
+*/
+
+app.use((error, _req, res, _next) => {
+  console.error("Server error:", error);
+
+  if (res.headersSent) {
+    return res.end();
+  }
+
+  res.status(500).json({
+    error: "Terjadi kesalahan internal."
+  });
 });
 
 /*
@@ -502,20 +615,38 @@ app.get("*", (_req, res) => {
 |--------------------------------------------------------------------------
 */
 
-app.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-    console.log(
-      `BLACKBOX AI listening on port ${PORT}`
-    );
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log("----------------------------------");
+  console.log(" MUS AI BACKEND");
+  console.log("----------------------------------");
+  console.log(`Port       : ${PORT}`);
+  console.log(`Provider   : ${API_URL}`);
+  console.log(`Model      : ${process.env.OVERCHAT_MODEL || "openai/gpt-4o"}`);
+  console.log(`Frontend   : ${FRONTEND_PATH}`);
+  console.log(`Streaming  : Enabled`);
+  console.log("----------------------------------");
+});
 
-    console.log(
-      `Port: ${PORT}`
-    );
+/*
+|--------------------------------------------------------------------------
+| GRACEFUL SHUTDOWN
+|--------------------------------------------------------------------------
+*/
 
-    console.log(
-      `Provider: ${API_URL}`
-    );
-  }
-);
+function shutdown(signal) {
+  console.log(`${signal} received. Shutting down...`);
+
+  server.close(() => {
+    console.log("Server closed.");
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error("Forced shutdown.");
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+process.on("SIGINT", () => shutdown("SIGINT"));
